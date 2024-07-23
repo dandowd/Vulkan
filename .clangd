@@ -1,0 +1,4 @@
+CompileFlags:
+  Add: [-I/opt/homebrew/include, -I/Users/danieldowd/VulkanSDK/1.3.283.0/macOS/include]
+  Add: [-L/opt/homebrew/lib, -L/Users/danieldowd/VulkanSDK/1.3.283.0/macOS/lib]
+  Add: [-target, arm-64-apple-macos11]
