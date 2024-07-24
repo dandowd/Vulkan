@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.30)
 project(MyVulkanProject)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "AddressSanitizer enabled for Debug build")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(Vulkan REQUIRED)
