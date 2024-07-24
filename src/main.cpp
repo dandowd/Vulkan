@@ -5,139 +5,144 @@
 #include <cstring>
 #include <ostream>
 
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
-#include <cstdlib>
 #include <vector>
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-const std::vector<const char*> validationLayers = {
-  "VK_LAYER_KHRONOS_validation"
-};
+const std::vector<const char *> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"};
 
 #ifdef NDEBUG
-  const bool enableValidationLayers = false;
+const bool enableValidationLayers = false;
 #else
-  const bool enableValidationLayers = true;
+const bool enableValidationLayers = true;
 #endif
 
 class HelloTriangleApplication {
-  public:
-    void run() {
-      initWindow();
-      initVulkan();
-      mainLoop();
-      cleanup();
-    }
+public:
+  void run() {
+    initWindow();
+    initVulkan();
+    mainLoop();
+    cleanup();
+  }
 
-  private:
-    GLFWwindow* window;
-    VkInstance instance;
+private:
+  GLFWwindow *window;
+  VkInstance instance;
 
-    void initWindow() {
-      std::cout << enableValidationLayers << std::endl;
-      glfwInit();
+  void initWindow() {
+    std::cout << enableValidationLayers << std::endl;
+    glfwInit();
 
-      glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-      glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-      window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Test", nullptr, nullptr);
-    }
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Test", nullptr, nullptr);
+  }
 
-    void initVulkan() {
-      createInstance();
-    }
+  void initVulkan() { createInstance(); }
 
-    bool checkValidationLayerSupport() {
-      uint32_t layerCount;
-      vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+  bool checkValidationLayerSupport() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-      std::vector<VkLayerProperties> availableLayers(layerCount);
-      vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-      for (const char* layerName : validationLayers) {
-        bool layerFound = false;
+    for (const char *layerName : validationLayers) {
+      bool layerFound = false;
 
-        for (const auto& layerProperties : availableLayers) {
-          if (strcmp(layerName, layerProperties.layerName) == 0) {
-            layerFound = true;
-            break;
-          }
-        }
-
-        if (!layerFound) {
-          return false;
+      for (const auto &layerProperties : availableLayers) {
+        if (strcmp(layerName, layerProperties.layerName) == 0) {
+          layerFound = true;
+          break;
         }
       }
 
-      return true;
-    };
-
-    void createInstance() {
-      if (enableValidationLayers && !checkValidationLayerSupport()) {
-        throw std::runtime_error("validation layers requested, but not available!");
+      if (!layerFound) {
+        return false;
       }
+    }
 
-      VkApplicationInfo appInfo {};
-      appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-      appInfo.pApplicationName = "Hello Triangle";
-      appInfo.applicationVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
-      appInfo.pEngineName = "No Engine";
-      appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-      appInfo.apiVersion = VK_API_VERSION_1_0;
+    return true;
+  };
 
-      uint32_t glfwExtensionCount = 0;
-      const char** glfwExtensions;
+  void createInstance() {
+    if (enableValidationLayers && !checkValidationLayerSupport()) {
+      throw std::runtime_error(
+          "validation layers requested, but not available!");
+    }
 
-      glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "Hello Triangle";
+    appInfo.applicationVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
+    appInfo.pEngineName = "No Engine";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_0;
 
-      VkInstanceCreateInfo createInfo{};
-      createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-      createInfo.pApplicationInfo = &appInfo;
+    VkInstanceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledLayerCount = 0;
+
+    // Required for mac
+    std::vector<const char *> requiredExtensions = getRequiredExtensions();
+
+    requiredExtensions.emplace_back(
+        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
+    createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    createInfo.enabledExtensionCount = (uint32_t)requiredExtensions.size();
+    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+
+    if (enableValidationLayers) {
+      std::cout << "validation enabled, adding layers." << std::endl;
+      createInfo.enabledLayerCount =
+          static_cast<uint32_t>(validationLayers.size());
+      createInfo.ppEnabledLayerNames = validationLayers.data();
+    } else {
       createInfo.enabledLayerCount = 0;
-
-      // Required for mac
-      std::vector<const char *> requiredExtensions;
-
-      for(uint32_t i = 0; i < glfwExtensionCount; i++) {
-        requiredExtensions.emplace_back(glfwExtensions[i]);
-      }
-
-      requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-
-      createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-      createInfo.enabledExtensionCount = (uint32_t) requiredExtensions.size();
-      createInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
-      if (enableValidationLayers) {
-        std::cout << "validation enabled, adding layers." << std::endl;
-        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-      } else {
-        createInfo.enabledLayerCount = 0;
-      }
-
-      if(vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create instance!");
-      }
     }
 
-    void mainLoop() {
-      while(!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-      }
+    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create instance!");
+    }
+  }
+
+  std::vector<const char *> getRequiredExtensions() {
+    uint32_t glfwExtensionCount = 0;
+    const char **glfwExtensions;
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    std::vector<const char *> extensions(glfwExtensions,
+                                         glfwExtensions + glfwExtensionCount);
+
+    if (enableValidationLayers) {
+      extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    void cleanup() {
-      vkDestroyInstance(instance, nullptr);
+    return extensions;
+  }
 
-      glfwDestroyWindow(window);
-
-      glfwTerminate();
+  void mainLoop() {
+    while (!glfwWindowShouldClose(window)) {
+      glfwPollEvents();
     }
+  }
+
+  void cleanup() {
+    vkDestroyInstance(instance, nullptr);
+
+    glfwDestroyWindow(window);
+
+    glfwTerminate();
+  }
 };
 
 int main() {
@@ -145,7 +150,7 @@ int main() {
 
   try {
     app.run();
-  } catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
