@@ -84,6 +84,16 @@ private:
       return;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+    populateDebugMessengerCreateInfo(createInfo);
+
+    if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr,
+                                     &debugMessenger) != VK_SUCCESS) {
+      throw std::runtime_error("failed to setup debug messenger!");
+    }
+  }
+
+  void populateDebugMessengerCreateInfo(
+      VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     createInfo.messageSeverity =
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -95,11 +105,6 @@ private:
     createInfo.pfnUserCallback = debugCallback;
     // can be used to pass data through to callback
     createInfo.pUserData = nullptr;
-
-    if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr,
-                                     &debugMessenger) != VK_SUCCESS) {
-      throw std::runtime_error("failed to setup debug messenger!");
-    }
   }
 
   bool checkValidationLayerSupport() {
@@ -156,13 +161,21 @@ private:
     createInfo.enabledExtensionCount = (uint32_t)requiredExtensions.size();
     createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
+    // The debugCreateInfo variable is placed outside the if statement to ensure
+    // that it is not destroyed before the vkCreateInstance call
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     if (enableValidationLayers) {
       std::cout << "validation enabled, adding layers." << std::endl;
       createInfo.enabledLayerCount =
           static_cast<uint32_t>(validationLayers.size());
       createInfo.ppEnabledLayerNames = validationLayers.data();
+
+      populateDebugMessengerCreateInfo(debugCreateInfo);
+      createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
     } else {
       createInfo.enabledLayerCount = 0;
+
+      createInfo.pNext = nullptr;
     }
 
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
